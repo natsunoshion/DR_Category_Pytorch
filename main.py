@@ -26,6 +26,27 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
 
+##################################################
+# kappa参数计算
+##################################################
+def weight_kappa(result, test_num):
+    weight = torch.zeros(5, 5)  # 新建一个矩阵，存放权重
+    for i in range(5):
+        for j in range(5):
+            weight[i, j] = (i - j) * (i - j) / 16
+    fenzi = 0
+    for i in range(5):
+        for j in range(5):
+            fenzi = fenzi + result[i, j] * weight[i, j]
+    fenmu = 0
+    for i in range(5):
+        for j in range(5):
+            fenmu = fenmu + weight[i, j] * result[:, j].sum() * result[i, :].sum()
+
+    weght_kappa = 1 - (fenzi / (fenmu / test_num))
+    return float(weght_kappa)
+
+
 
 ##################################################
 # 混淆矩阵的绘制
@@ -125,6 +146,7 @@ def test():
     conf_matrix = conf_matrix.int()  # 转为 int 矩阵，方便在终端看
     print('Accuracy on test set: %d %% ' % (100 * correct / total))
     print('混淆矩阵为：\n', conf_matrix)
+    print('weight_kappa的值为：', weight_kappa(conf_matrix, len(test_data)))
 
     plot(conf_matrix, correct / total)  # 绘制
 
@@ -186,8 +208,8 @@ if __name__ == '__main__':
     # 带权损失函数的方案已经弃用
     # class_weight = torch.tensor([1880 / 1880, 1880 / 189, 1880 / 1344, 1880 / 71, 1880 / 275])  # 损失函数的权值，由样本数量构成，好像效果不太行
     # criterion = nn.CrossEntropyLoss(weight=class_weight)  # 使用带权值的交叉熵函数，解决样本数量不平衡的问题
-    # criterion = nn.CrossEntropyLoss()
-    criterion = FocalLoss(5)  # 使用 FocalLoss 函数来处理不平衡数据，实际测试效果最好
+    criterion = nn.CrossEntropyLoss()
+    # criterion = FocalLoss(5)  # 使用 FocalLoss 函数来处理不平衡数据，实际测试效果最好
     criterion = criterion.cuda()
 
     ######################
