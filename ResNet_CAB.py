@@ -36,27 +36,26 @@ def conv1x1(in_planes, out_planes, stride=1):
 
 
 
-# ç±»åˆ«æ³¨æ„åŠ›ï¼Œè§£å†³ 1ã€3ã€4 ç±»æ•°æ®å°‘çš„é—®é¢˜
-class Category_attention_block(nn.Module):
+# Àà±ğ×¢ÒâÁ¦£¬½â¾ö 1¡¢3¡¢4 ÀàÊı¾İÉÙµÄÎÊÌâ
+class CategoryAttentionBlock(nn.Module):
     def __init__(self, in_planes, classes=5, k=5):
-        super(Category_attention_block, self).__init__()
-        self.in_planes = in_planes  # è¾“å…¥é€šé“æ•°
+        super(CategoryAttentionBlock, self).__init__()
+        self.in_planes = in_planes  # ÊäÈëÍ¨µÀÊı
         self.classes = classes
         self.k = k
-        self.sigmoid = nn.Sigmoid()
-        self.conv = nn.Conv2d(self.in_planes, self.k * self.classes, (1, 1), padding='same')
+        self.conv = nn.Conv2d(self.in_planes, self.k * self.classes, (1, 1), padding='same')  # ²ÎÊı¶ÔÓ¦£ºÊäÈëÍ¨µÀ£¬Êä³öÍ¨µÀ£¬¾í»ıºË´óĞ¡
         self.BatchNorm2d = nn.BatchNorm2d(self.k * self.classes)
         self.ReLU = nn.ReLU()
         self.GlobalMaxPool2D = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
         shape = x.size()
-        F = self.conv(x)  # å‚æ•°å¯¹åº”ï¼šè¾“å…¥é€šé“ï¼Œè¾“å‡ºé€šé“ï¼Œå·ç§¯æ ¸å¤§å°
+        F = self.conv(x)  # 1 * 1 ¾í»ı
         F = self.BatchNorm2d(F)
         F1 = self.ReLU(F)
 
         F2 = F1
-        # GlobalMaxPool2D
+        # GlobalMaxPool2D£¬¼´ÂÛÎÄÖĞµÄ GMP
         x = self.GlobalMaxPool2D(F2)
 
         x = torch.reshape(x, (-1, self.classes, self.k))
@@ -67,9 +66,9 @@ class Category_attention_block(nn.Module):
         S = torch.reshape(S, (int(S.size()[0]), int(S.size()[1]), 1, 1))
 
         x = torch.mul(S, x)
-        M = torch.mean(x, axis=1, keepdims=True)
+        M = torch.mean(x, axis=1, keepdims=True)  # M ÊÇ CAB Ä£¿éÓÒÏÂ½ÇµÄATT
 
-        return self.sigmoid(M)
+        return M
 
 class ChannelAttention(nn.Module):
     def __init__(self, in_planes, ratio=16):
@@ -217,7 +216,7 @@ class ResNet(nn.Module):
         self._norm_layer = norm_layer
 
         self.inplanes = 64
-        self.dilation = 1
+        self.dilation = 1  # À©³ä
         if replace_stride_with_dilation is None:
             # each element in the tuple indicates if we should replace
             # the 2x2 stride with a dilated convolution instead
@@ -229,14 +228,14 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
-        self.bn1 = norm_layer(self.inplanes)
+        self.bn1 = norm_layer(self.inplanes)  # BatchNorm2d
         self.relu = nn.ReLU(inplace=True)
 
-        # ç½‘ç»œçš„ç¬¬ä¸€å±‚åŠ å…¥æ³¨æ„åŠ›æœºåˆ¶
+        # ÍøÂçµÄµÚÒ»²ã¼ÓÈë×¢ÒâÁ¦»úÖÆ
         self.ca = ChannelAttention(self.inplanes)
         self.sa = SpatialAttention()
 
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)  # padding = 1 µÄº¬Òå£ºÔÚ±ßÔµÌî³äÒ»È¦ 0
         self.layer1 = self._make_layer(block, 64, layers[0])
         self.layer2 = self._make_layer(block, 128, layers[1], stride=2,
                                        dilate=replace_stride_with_dilation[0])
@@ -244,12 +243,12 @@ class ResNet(nn.Module):
                                        dilate=replace_stride_with_dilation[1])
         self.layer4 = self._make_layer(block, 512, layers[3], stride=2,
                                        dilate=replace_stride_with_dilation[2])
-        # ç½‘ç»œçš„å·ç§¯å±‚çš„æœ€åä¸€å±‚åŠ å…¥æ³¨æ„åŠ›æœºåˆ¶
+        # ÍøÂçµÄ¾í»ı²ãµÄ×îºóÒ»²ã¼ÓÈë×¢ÒâÁ¦»úÖÆ
         self.ca1 = ChannelAttention(self.inplanes)
         self.sa1 = SpatialAttention()
-        self.CAB = Category_attention_block(self.inplanes)
+        self.CAB = CategoryAttentionBlock(self.inplanes)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))  # è¿™ä¸€æ­¥ï¼Œç›¸å½“äºæ˜¯å…¼å®¹äº†è¾“å…¥å›¾åƒçš„å¤§å°é—®é¢˜
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
 
         for m in self.modules():
@@ -269,11 +268,11 @@ class ResNet(nn.Module):
                 elif isinstance(m, BasicBlock):
                     nn.init.constant_(m.bn2.weight, 0)
 
-    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
+    def _make_layer(self, block, planes, blocks, stride=1, dilate=False):  # blocks Ö¸Ã¿Ò»×éÓĞ¶àÉÙ¸ö Resblock
         norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
-        if dilate:
+        if dilate:  # À©ÕÅÍ¨µÀÊı
             self.dilation *= stride
             stride = 1
         if stride != 1 or self.inplanes != planes * block.expansion:
@@ -285,7 +284,7 @@ class ResNet(nn.Module):
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
                             self.base_width, previous_dilation, norm_layer))
-        self.inplanes = planes * block.expansion
+        self.inplanes = planes * block.expansion  # Èç¹û dilate ÊÇ True£¬ÄÇÃ´Õâ¸öµØ·½Í¨µÀÊı»á±»À©³ä
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups,
                                 base_width=self.base_width, dilation=self.dilation,
@@ -294,15 +293,17 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
+        x = self.conv1(x)  # 7 * 7£¬stride = 2 ¾í»ı£¬¾í»ıºóÍ¨µÀÊı´Ó RGB: 3 Í¨µÀ±äÎªÁË inplanes: 64 Í¨µÀ
+        x = self.bn1(x)  # BN²ã£¬·ÀÖ¹Êı¾İÔÚ½øĞĞ Relu Ö®Ç°ÒòÎªÊı¾İ¹ı´ó¶øµ¼ÖÂÍøÂçĞÔÄÜ²»ÎÈ¶¨
+        x = self.relu(x)  # ReLU ¼¤»îº¯Êı
 
+        # ¿Õ¼äºÍÊ±¼ä×¢ÒâÁ¦»úÖÆ
         x = self.ca(x) * x
         x = self.sa(x) * x
 
-        x = self.maxpool(x)
+        x = self.maxpool(x)  # È¡×î´óÖµ·½Ê½½øĞĞµÄ³Ø»¯
 
+        # ËÄ×é Bottleneck
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
@@ -310,12 +311,12 @@ class ResNet(nn.Module):
 
         x = self.ca1(x) * x
         x = self.sa1(x) * x
-        x = self.CAB(x) * x
+        x = self.CAB(x) * x  # M ºÍÊäÈëµÄ x »¹Òª³ËÒ»´Î£¬È»ºó½øĞĞ·ÖÀà²Ù×÷
 
 
-        x = self.avgpool(x)
+        x = self.avgpool(x)  # ÕâÒ»²½£¬Ïàµ±ÓÚÊÇ¼æÈİÁËÊäÈëÍ¼ÏñµÄ´óĞ¡ÎÊÌâ
         x = x.reshape(x.size(0), -1)
-        x = self.fc(x)
+        x = self.fc(x)  # È«Á¬½Ó²ã
 
         return x
 

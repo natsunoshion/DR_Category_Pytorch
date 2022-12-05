@@ -26,7 +26,7 @@ class FocalLoss(nn.Module):  # FocalLoss 损失函数
         class_mask = Variable(class_mask)
         ids = targets.view(-1, 1)
         class_mask.scatter_(1, ids.data, 1.)
-        #print(class_mask)
+        # print(class_mask)
 
 
         if inputs.is_cuda and not self.alpha.is_cuda:
@@ -36,12 +36,12 @@ class FocalLoss(nn.Module):  # FocalLoss 损失函数
         probs = (P*class_mask).sum(1).view(-1,1)
 
         log_p = probs.log()
-        #print('probs size= {}'.format(probs.size()))
-        #print(probs)
+        # print('probs size= {}'.format(probs.size()))
+        # print(probs)
 
         batch_loss = -alpha*(torch.pow((1-probs), self.gamma))*log_p
-        #print('-----bacth_loss------')
-        #print(batch_loss)
+        # print('-----bacth_loss------')
+        # print(batch_loss)
 
 
         if self.size_average:

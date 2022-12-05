@@ -2,35 +2,35 @@ import torch
 import numpy as np
 import torchvision
 import adabound
-from tqdm import tqdm  # è¿›åº¦æ¡
+from tqdm import tqdm  # ½ø¶ÈÌõ
 from torch import nn
-from torch.utils.data import DataLoader  # åˆ›å»ºå¯ä»¥è¿­ä»£çš„æ•°æ®è£…è½½å™¨
-from torchvision import datasets  # è°ƒç”¨æ•°æ®é›†
-from torchvision import transforms  # å›¾åƒé¢„å¤„ç†åŒ…
-import torch.nn.functional as F  # è°ƒç”¨æ¿€æ´»å‡½æ•°ReLU
-import torch.optim as optim  # ä½¿ç”¨ä¼˜åŒ–å™¨
+from torch.utils.data import DataLoader  # ´´½¨¿ÉÒÔµü´úµÄÊı¾İ×°ÔØÆ÷
+from torchvision import datasets  # µ÷ÓÃÊı¾İ¼¯
+from torchvision import transforms  # Í¼ÏñÔ¤´¦Àí°ü
+import torch.nn.functional as F  # µ÷ÓÃ¼¤»îº¯ÊıReLU
+import torch.optim as optim  # Ê¹ÓÃÓÅ»¯Æ÷
 import matplotlib.pyplot as plt
-import torchvision.models as models  # é¢„è®­ç»ƒæ¨¡å‹
-from FocalLoss import FocalLoss  # æŸå¤±å‡½æ•°
+import torchvision.models as models  # Ô¤ÑµÁ·Ä£ĞÍ
+from FocalLoss import FocalLoss  # ËğÊ§º¯Êı
 from ResNet_CAB import resnet50
 
 ##################################################
-# æœ¬æ¬¡ python å¤§ä½œä¸šæ˜¯ DR å›¾åƒåˆ†ç±»
-# åŸºç¡€æ¨¡å‹ä¸º ResNet50
-# æˆ‘åœ¨ä¸Šé¢åŠ äº† CAB æ³¨æ„åŠ›æœºåˆ¶å’Œ CBAM æ³¨æ„åŠ›æœºåˆ¶
+# ±¾´Î python ´ó×÷ÒµÊÇ DR Í¼Ïñ·ÖÀà
+# »ù´¡Ä£ĞÍÎª ResNet50
+# ÎÒÔÚÉÏÃæ¼ÓÁË CAB ×¢ÒâÁ¦»úÖÆºÍ CBAM ×¢ÒâÁ¦»úÖÆ
 ##################################################
 
 
-# å¯»æ‰¾æœ€ä¼˜ç®—æ³•
+# Ñ°ÕÒ×îÓÅËã·¨
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
 
 ##################################################
-# kappaå‚æ•°è®¡ç®—
+# »ìÏı¾ØÕóµÄ kappa ²ÎÊı¼ÆËã
 ##################################################
 def weight_kappa(result, test_num):
-    weight = torch.zeros(5, 5)  # æ–°å»ºä¸€ä¸ªçŸ©é˜µï¼Œå­˜æ”¾æƒé‡
+    weight = torch.zeros(5, 5)  # ĞÂ½¨Ò»¸ö¾ØÕó£¬´æ·ÅÈ¨ÖØ
     for i in range(5):
         for j in range(5):
             weight[i, j] = (i - j) * (i - j) / 16
@@ -49,29 +49,29 @@ def weight_kappa(result, test_num):
 
 
 ##################################################
-# æ··æ·†çŸ©é˜µçš„ç»˜åˆ¶
+# »ìÏı¾ØÕóµÄ»æÖÆ
 ##################################################
 def plot(matrix, acc):
-    classes = 5  # 5 åˆ†ç±»
-    labels = ['No DR', 'Mild DR', 'Moderate DR', 'Servere DR', 'Proliferative DR']  # æ ‡ç­¾
+    classes = 5  # 5 ·ÖÀà
+    labels = ['No DR', 'Mild DR', 'Moderate DR', 'Servere DR', 'Proliferative DR']  # ±êÇ©
 
     plt.imshow(matrix, cmap=plt.cm.Blues)
 
-    # è®¾ç½®xè½´åæ ‡label
+    # ÉèÖÃxÖá×ø±êlabel
     plt.xticks(range(classes), labels, rotation=45)
-    # è®¾ç½®yè½´åæ ‡label
+    # ÉèÖÃyÖá×ø±êlabel
     plt.yticks(range(classes), labels)
-    # æ˜¾ç¤ºcolorbar
+    # ÏÔÊ¾colorbar
     plt.colorbar()
     plt.xlabel('True Labels')
     plt.ylabel('Predicted Labels')
     plt.title('Confusion matrix (acc=' + str(acc) + ')')
 
-    # åœ¨å›¾ä¸­æ ‡æ³¨æ•°é‡/æ¦‚ç‡ä¿¡æ¯
+    # ÔÚÍ¼ÖĞ±ê×¢ÊıÁ¿/¸ÅÂÊĞÅÏ¢
     thresh = matrix.max() / 2
     for x in range(classes):
         for y in range(classes):
-            # æ³¨æ„è¿™é‡Œçš„matrix[y, x]ä¸æ˜¯matrix[x, y]
+            # ×¢ÒâÕâÀïµÄmatrix[y, x]²»ÊÇmatrix[x, y]
             info = int(matrix[y, x])
             plt.text(x, y, info,
                         verticalalignment='center',
@@ -80,11 +80,11 @@ def plot(matrix, acc):
     plt.tight_layout()
     plt.show()
     plt.savefig('result/confusion_matrix.png')
-    plt.clf()  # æ¸…ç©ºç”»å¸ƒï¼Œå…å¾—ä¸‹ä¸€æ¬¡ç»˜å›¾çš„æ—¶å€™å‡ºé—®é¢˜
+    plt.clf()  # Çå¿Õ»­²¼£¬ÃâµÃÏÂÒ»´Î»æÍ¼µÄÊ±ºò³öÎÊÌâ
 
 
 ##################################################
-# è®­ç»ƒ
+# ÑµÁ·
 ##################################################
 def train(epoch):
     model.train()
@@ -92,79 +92,79 @@ def train(epoch):
     running_loss = 0.0
     right = 0
     for batch_idx, data in loop:
-        # åˆå§‹åŒ–
+        # ³õÊ¼»¯
         inputs, target = data
         inputs =inputs.cuda()
         target = target.cuda()
-        optimizer.zero_grad() # ä¼˜åŒ–å™¨ä½¿ç”¨ä¹‹å‰å…ˆæ¸…é›¶
+        optimizer.zero_grad()  # ÓÅ»¯Æ÷Ê¹ÓÃÖ®Ç°ÏÈÇåÁã
 
-        # ä¼˜åŒ–æ¨¡å‹
+        # ÓÅ»¯Ä£ĞÍ
         outputs = model(inputs)
         loss = criterion(outputs, target)
         loss.backward()
         optimizer.step()
         # scheduler.step()
 
-        # è®¡ç®—è¯„ä¼°å€¼ï¼Œå¹¶ç”¨è¿›åº¦æ¡ã€æ··æ·†çŸ©é˜µçš„æ–¹å¼è¾“å‡º
+        # ¼ÆËãÆÀ¹ÀÖµ£¬²¢ÓÃ½ø¶ÈÌõ¡¢»ìÏı¾ØÕóµÄ·½Ê½Êä³ö
         running_loss += loss.item()
         _, predicted = torch.max(outputs.data, 1)
-        # ç´¯åŠ è¯†åˆ«æ­£ç¡®çš„æ ·æœ¬æ•°
+        # ÀÛ¼ÓÊ¶±ğÕıÈ·µÄÑù±¾Êı
         right += (predicted == target).sum()
-        # æ›´æ–°ä¿¡æ¯
+        # ¸üĞÂĞÅÏ¢
         loop.set_description(f'Epoch [{epoch}/{EPOCHS}]')
         loop.set_postfix(loss=running_loss / (batch_idx + 1), acc=float(right) / float(batch_size * (batch_idx + 1)))
     return loss.item()
 
 
 ##################################################
-# æµ‹è¯•
+# ²âÊÔ
 ##################################################
 def test():
     model.eval()
     correct = 0
     total = 0
 
-    # æ··æ·†çŸ©é˜µ
+    # »ìÏı¾ØÕó
     conf_matrix = torch.zeros(5, 5)
 
-    with torch.no_grad():  # å…¨ç¨‹ä¸è®¡ç®—æ¢¯åº¦
+    with torch.no_grad():  # È«³Ì²»¼ÆËãÌİ¶È
         for data in test_loader:
-            images, labels = data  # è®°å½•åŸå§‹å€¼
+            images, labels = data  # ¼ÇÂ¼Ô­Ê¼Öµ
             images = images.cuda()
             labels = labels.cuda()
-            outputs = model(images)  # æŠŠå›¾åƒä¸¢è¿›æ¨¡å‹è®­ç»ƒï¼Œå¾—åˆ°è¾“å‡ºç»“æœ
-            _, predicted = torch.max(outputs.data, dim=1)  # æ±‚æ¯ä¸€è¡Œæœ€å¤§å€¼çš„ä¸‹æ ‡
-            # è¾“å‡ºçš„ outputs æ˜¯ N * 1 çš„ï¼Œdim=1 æŒ‡çš„æ˜¯æ²¿ç€ç¬¬ 1 ä¸ªç»´åº¦ï¼Œ-->ï¼Œå³åˆ—ï¼Œè¡Œæ˜¯ç¬¬ 0 ä¸ªç»´åº¦
-            # è¿”å›ä¸¤ä¸ªå€¼ï¼Œæœ€å¤§å€¼ä¸‹æ ‡ä»¥åŠæœ€å¤§å€¼æ˜¯å¤šå°‘
-            total += labels.size(0)  # è®°å½•æœ‰å¤šå°‘æ¡ labels
-            correct += (predicted == labels).sum().item()  # ç›¸åŒçš„æ±‚å’Œå–æ ‡é‡
+            outputs = model(images)  # °ÑÍ¼Ïñ¶ª½øÄ£ĞÍÑµÁ·£¬µÃµ½Êä³ö½á¹û
+            _, predicted = torch.max(outputs.data, dim=1)  # ÇóÃ¿Ò»ĞĞ×î´óÖµµÄÏÂ±ê
+            # Êä³öµÄ outputs ÊÇ N * 1 µÄ£¬dim=1 Ö¸µÄÊÇÑØ×ÅµÚ 1 ¸öÎ¬¶È£¬-->£¬¼´ÁĞ£¬ĞĞÊÇµÚ 0 ¸öÎ¬¶È
+            # ·µ»ØÁ½¸öÖµ£¬×î´óÖµÏÂ±êÒÔ¼°×î´óÖµÊÇ¶àÉÙ
+            total += labels.size(0)  # ¼ÇÂ¼ÓĞ¶àÉÙÌõ labels
+            correct += (predicted == labels).sum().item()  # ÏàÍ¬µÄÇóºÍÈ¡±êÁ¿
 
-            # æ··æ·†çŸ©é˜µè®¡ç®—ï¼Œè¡Œæ˜¯é¢„æµ‹å€¼ï¼Œåˆ—æ˜¯çœŸå®å€¼ï¼Œå¯¹åº”çš„çŸ©é˜µå€¼æ˜¯è¿™æ ·çš„æœ‰åºå¯¹åœ¨æµ‹è¯•é›†ä¸­å‡ºç°çš„æ¬¡æ•°
+            # »ìÏı¾ØÕó¼ÆËã£¬ĞĞÊÇÔ¤²âÖµ£¬ÁĞÊÇÕæÊµÖµ£¬¶ÔÓ¦µÄ¾ØÕóÖµÊÇÕâÑùµÄÓĞĞò¶ÔÔÚ²âÊÔ¼¯ÖĞ³öÏÖµÄ´ÎÊı
             for i in range(labels.size()[0]):
                 conf_matrix[int(outputs.argmax(1)[i])][int(labels[i])] += 1
-            # print('æœ¬æ¬¡è®¡ç®—åæ··æ·†çŸ©é˜µä¸ºï¼š\n', conf_matrix.int())
-    conf_matrix = conf_matrix.int()  # è½¬ä¸º int çŸ©é˜µï¼Œæ–¹ä¾¿åœ¨ç»ˆç«¯çœ‹
+            # print('±¾´Î¼ÆËãºó»ìÏı¾ØÕóÎª£º\n', conf_matrix.int())
+    conf_matrix = conf_matrix.int()  # ×ªÎª int ¾ØÕó£¬·½±ãÔÚÖÕ¶Ë¿´
     print('Accuracy on test set: %d %% ' % (100 * correct / total))
-    print('æ··æ·†çŸ©é˜µä¸ºï¼š\n', conf_matrix)
-    print('weight_kappaçš„å€¼ä¸ºï¼š', weight_kappa(conf_matrix, len(test_data)))
+    print('»ìÏı¾ØÕóÎª£º\n', conf_matrix)
+    print('weight_kappaµÄÖµÎª£º', weight_kappa(conf_matrix, len(test_data)))
 
-    plot(conf_matrix, correct / total)  # ç»˜åˆ¶
+    plot(conf_matrix, correct / total)  # »æÖÆ
 
     return correct / total
 
 
 ##################################################
-# ä¸»å‡½æ•°
+# Ö÷º¯Êı
 ##################################################
 if __name__ == '__main__':
-    image_size = 512  # å›¾åƒå¤§å° 512 * 512
-    batch_size = 8  # è°ƒè¿™ä¹ˆä½æ˜¯å› ä¸ºäº‘æœåŠ¡å™¨å†…å­˜æœ‰é™ï¼Œè°ƒå¤ªé«˜ç›´æ¥ç»™æˆ‘ CUDA out of memory
-    EPOCHS = 70  # æµ‹ 70 æ¬¡
+    image_size = 512  # Í¼Ïñ´óĞ¡ 512 * 512
+    batch_size = 8  # µ÷ÕâÃ´µÍÊÇÒòÎªÔÆ·şÎñÆ÷ÄÚ´æÓĞÏŞ£¬µ÷Ì«¸ßÖ±½Ó¸øÎÒ CUDA out of memory
+    EPOCHS = 70  # ²â 70 ´Î
     lr1 = 1e-3
     lr2 = 0.1
 
     ######################
-    # é¢„å¤„ç†
+    # Ô¤´¦Àí
     ######################
     transform_train = transforms.Compose([
         transforms.RandomHorizontalFlip(),
@@ -176,70 +176,70 @@ if __name__ == '__main__':
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
-    # ä½¿ç”¨ torchvision.datasets.ImageFolder è¯»å–æ•°æ®é›†æŒ‡å®š train å’Œ test æ–‡ä»¶å¤¹
+    # Ê¹ÓÃ torchvision.datasets.ImageFolder ¶ÁÈ¡Êı¾İ¼¯Ö¸¶¨ train ºÍ test ÎÄ¼ş¼Ğ
     train_data = torchvision.datasets.ImageFolder('DDR/train/', transform=transform_train)
-    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)  # Windows ä¸‹ num_workers åªèƒ½è®¾ç½®ä¸º 0ï¼Œå½“ç„¶ï¼Œæˆ‘ç”¨äº‘æœåŠ¡å™¨å°±æ²¡è¿™ä¸ªé™åˆ¶äº†
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)  # Windows ÏÂ num_workers Ö»ÄÜÉèÖÃÎª 0£¬µ±È»£¬ÎÒÓÃÔÆ·şÎñÆ÷¾ÍÃ»Õâ¸öÏŞÖÆÁË
 
     test_data = torchvision.datasets.ImageFolder('DDR/test/', transform=transform_test)
     test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=True, num_workers=2, pin_memory=True)
 
 
     ######################
-    # å®ä¾‹åŒ–
+    # ÊµÀı»¯
     ######################
-    # æ–°ç‰ˆ ResNet å¯¹è¾“å…¥å›¾åƒå¤§å°æ²¡å¼ºåˆ¶è¦æ±‚äº†ï¼Œå› ä¸ºæœ‰ä¸€ä¸ª model.avgpool = nn.AdaptiveAvgPool2d((1, 1))ï¼Œè¿™ä¹Ÿå°±æ˜¯æœ€åä¸ç®¡å·ç§¯å±‚çš„è¾“å‡ºå¤§å°ï¼Œç›´æ¥å–å¹³å‡å€¼è¿›è¡Œè¾“å‡º
-    # model = ResidualNet("ImageNet", 34, 5, 'BAM')  # å¸¦æœ‰ BAM æ³¨æ„åŠ›æœºåˆ¶çš„ ResNet
-    model = resnet50()  # å¸¦æœ‰ CBAM æ³¨æ„åŠ›æœºåˆ¶çš„ ResNet
-    # model = ghost_net()  # GhostNet è‡ªå¸¦ SE æ³¨æ„åŠ›æœºåˆ¶ï¼Œdropout å±‚
-    # model = mobilenetv3()  # è‡ªå¸¦ drpoutã€SE
-    # ä¸‹é¢è¿™ä¸¤è¡Œæ˜¯åœ¨é‡å†™ç½‘ç»œçš„å…¨è¿æ¥å±‚ï¼ŒæŠŠè¾“å‡ºè°ƒä¸º 5ï¼Œä¹Ÿå°±æ˜¯åš 5 åˆ†ç±»å·¥ä½œ
+    # ĞÂ°æ ResNet ¶ÔÊäÈëÍ¼Ïñ´óĞ¡Ã»Ç¿ÖÆÒªÇóÁË£¬ÒòÎªÓĞÒ»¸ö model.avgpool = nn.AdaptiveAvgPool2d((1, 1))£¬ÕâÒ²¾ÍÊÇ×îºó²»¹Ü¾í»ı²ãµÄÊä³ö´óĞ¡£¬Ö±½ÓÈ¡Æ½¾ùÖµ½øĞĞÊä³ö
+    # model = ResidualNet("ImageNet", 34, 5, 'BAM')  # ´øÓĞ BAM ×¢ÒâÁ¦»úÖÆµÄ ResNet
+    model = resnet50()  # ´øÓĞ CBAM ×¢ÒâÁ¦»úÖÆµÄ ResNet
+    # model = ghost_net()  # GhostNet ×Ô´ø SE ×¢ÒâÁ¦»úÖÆ£¬dropout ²ã
+    # model = mobilenetv3()  # ×Ô´ø drpout¡¢SE
+    # ÏÂÃæÕâÁ½ĞĞÊÇÔÚÖØĞ´ÍøÂçµÄÈ«Á¬½Ó²ã£¬°ÑÊä³öµ÷Îª 5£¬Ò²¾ÍÊÇ×ö 5 ·ÖÀà¹¤×÷
     in_channel = model.fc.in_features
     model.fc = nn.Linear(in_channel, 5)
 
-    # åŠ ä¸€ä¸ª dropout å±‚ï¼Œå…ˆè¯•è¯•
+    # ¼ÓÒ»¸ö dropout ²ã
     model.fc.register_forward_hook(lambda m, inp, out: F.dropout(out, p=0.5, training=m.training))
 
-    # gpu åŠ é€Ÿ
+    # gpu ¼ÓËÙ
     model = model.cuda()
 
     ######################
-    # æŸå¤±å‡½æ•°
+    # ËğÊ§º¯Êı
     ######################
-    # å¸¦æƒæŸå¤±å‡½æ•°çš„æ–¹æ¡ˆå·²ç»å¼ƒç”¨
-    # class_weight = torch.tensor([1880 / 1880, 1880 / 189, 1880 / 1344, 1880 / 71, 1880 / 275])  # æŸå¤±å‡½æ•°çš„æƒå€¼ï¼Œç”±æ ·æœ¬æ•°é‡æ„æˆï¼Œå¥½åƒæ•ˆæœä¸å¤ªè¡Œ
-    # criterion = nn.CrossEntropyLoss(weight=class_weight)  # ä½¿ç”¨å¸¦æƒå€¼çš„äº¤å‰ç†µå‡½æ•°ï¼Œè§£å†³æ ·æœ¬æ•°é‡ä¸å¹³è¡¡çš„é—®é¢˜
-    criterion = nn.CrossEntropyLoss()
-    # criterion = FocalLoss(5)  # ä½¿ç”¨ FocalLoss å‡½æ•°æ¥å¤„ç†ä¸å¹³è¡¡æ•°æ®ï¼Œå®é™…æµ‹è¯•æ•ˆæœæœ€å¥½
+    # ´øÈ¨ËğÊ§º¯ÊıµÄ·½°¸ÒÑ¾­ÆúÓÃ
+    # class_weight = torch.tensor([1880 / 1880, 1880 / 189, 1880 / 1344, 1880 / 71, 1880 / 275])  # ËğÊ§º¯ÊıµÄÈ¨Öµ£¬ÓÉÑù±¾ÊıÁ¿¹¹³É£¬ºÃÏñĞ§¹û²»Ì«ĞĞ
+    # criterion = nn.CrossEntropyLoss(weight=class_weight)  # Ê¹ÓÃ´øÈ¨ÖµµÄ½»²æìØº¯Êı£¬½â¾öÑù±¾ÊıÁ¿²»Æ½ºâµÄÎÊÌâ
+    # criterion = nn.CrossEntropyLoss()
+    criterion = FocalLoss(5)  # Ê¹ÓÃ FocalLoss º¯ÊıÀ´´¦Àí²»Æ½ºâÊı¾İ£¬Êµ¼Ê²âÊÔĞ§¹û×îºÃ
     criterion = criterion.cuda()
 
     ######################
-    # ä¼˜åŒ–å™¨
+    # ÓÅ»¯Æ÷
     ######################
-    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)  # momentum:ä½¿ç”¨å¸¦å†²é‡çš„æ¨¡å‹æ¥ä¼˜åŒ–è®­ç»ƒè¿‡ç¨‹
-    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.1)  # åŠ äº† L2 æ­£åˆ™åŒ–ï¼Œè¯•è¯•æ•ˆæœï¼Œå¥½åƒä¸å’‹æ ·
+    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)  # momentum:Ê¹ÓÃ´ø³åÁ¿µÄÄ£ĞÍÀ´ÓÅ»¯ÑµÁ·¹ı³Ì
+    # optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=0.1)  # ¼ÓÁË L2 ÕıÔò»¯£¬ÊÔÊÔĞ§¹û£¬ºÃÏñ²»Õ¦Ñù
     optimizer = adabound.AdaBound(model.parameters(), lr=lr1, final_lr=lr2)
-    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda epoch: 1 / (epoch + 1), last_epoch=-1)  # è‡ªåŠ¨è°ƒæ•´å­¦ä¹ ç‡
+    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda epoch: 1 / (epoch + 1), last_epoch=-1)  # ×Ô¶¯µ÷ÕûÑ§Ï°ÂÊ
 
     ######################
-    # è®­ç»ƒéƒ¨åˆ†
+    # ÑµÁ·²¿·Ö
     ######################
-    torch.cuda.empty_cache()  # æ¸…æ‰ç¼“å­˜ï¼Œäº‘æœåŠ¡å™¨è€æ˜¯å´©ï¼Œä¸è¿‡è¿™å¥è¯å¥½åƒæ²¡ä»€ä¹ˆç”¨ï¼Œè¿˜ä¸å¦‚è°ƒå° batch_size
+    torch.cuda.empty_cache()  # Çåµô»º´æ£¬ÔÆ·şÎñÆ÷ÀÏÊÇ±À£¬²»¹ıÕâ¾ä»°ºÃÏñÃ»Ê²Ã´ÓÃ£¬»¹²»Èçµ÷Ğ¡ batch_size
     loss_list = []
     acc_list = []
     epoch_list = []
 
     for epoch in range(EPOCHS):
-        # ç”±äºä½¿ç”¨äº†è¿›åº¦æ¡ï¼Œè¿™ä¸ªä¹Ÿè¢«åºŸç”¨äº†
-        # print("----------ç¬¬{}è½®è®­ç»ƒå¼€å§‹ï¼š----------".format(epoch + 1))
-        loss = train(epoch)  # è®­ç»ƒä¸€æ¬¡
-        accuracy = test()  # æµ‹è¯•ä¸€æ¬¡
+        # ÓÉÓÚÊ¹ÓÃÁË½ø¶ÈÌõ£¬Õâ¸öÒ²±»·ÏÓÃÁË
+        # print("----------µÚ{}ÂÖÑµÁ·¿ªÊ¼£º----------".format(epoch + 1))
+        loss = train(epoch)  # ÑµÁ·Ò»´Î
+        accuracy = test()  # ²âÊÔÒ»´Î
 
         loss_list.append(loss)
         acc_list.append(accuracy)
         epoch_list.append(epoch)
 
     ######################
-    # ç»˜å›¾
+    # »æÍ¼
     ######################
     plt.plot(epoch_list, loss_list)
     plt.plot(epoch_list, acc_list)
